@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SafeNet Hub — AI Safety Lens (Prototype)</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#6ee7b7;
+    --danger:#ff7a7a; --glass: rgba(255,255,255,0.03); --radius:14px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background: linear-gradient(180deg,#071024 0%, #071a2a 60%);color:#e6eef6;line-height:1.4;padding:28px;}
+  .container{max-width:1100px;margin:0 auto;display:grid;gap:20px;grid-template-columns:1fr 420px;}
+  header{display:flex;align-items:center;gap:16px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:flex;align-items:center;justify-content:center;font-weight:700;color:#023;box-shadow:0 6px 18px rgba(0,0,0,0.6);}
+  h1{margin:0;font-size:18px}
+  p.subtitle{margin:0;color:var(--muted);font-size:13px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:var(--radius);box-shadow:0 6px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);}
+  .main{display:flex;flex-direction:column;gap:16px}
+  label{font-weight:600;font-size:13px;color:#cfe7ff}
+  textarea{width:100%;min-height:140px;background:var(--glass);border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03);color:inherit;resize:vertical}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:linear-gradient(90deg,#60a5fa,#6ee7b7);color:#012;padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:700; transition: all 0.2s ease;}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .small{padding:8px 10px;font-size:13px}
+  .meta{color:var(--muted);font-size:13px}
+  .right{display:flex;flex-direction:column;gap:16px}
+  .preview{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .img-preview{height:120px;border-radius:8px;background:linear-gradient(180deg,#081224,#0b2236);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);overflow:hidden;border:1px dashed rgba(255,255,255,0.03)}
+  .flag-list{display:flex;flex-direction:column;gap:10px;max-height:300px;overflow:auto;padding-right:6px}
+  .flag-item{display:flex;align-items:flex-start;gap:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+  .tag{font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03);color:var(--muted)}
+  .risk-high{color:var(--danger);font-weight:700}
+  .risk-low{color:#a2f5d8;font-weight:700}
+  
+  @media (max-width:980px){.container{grid-template-columns:1fr; padding:0 8px}.right{order:2}}
+  code.json{display:block;white-space:pre-wrap;background:#021324;color:#bfeee0;padding:10px;border-radius:8px;font-size:12px;margin-top:8px}
+  .evidence-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+
+  /* 🔑 LOGIN STYLES (from previous request, with adjusted margin-top) */
+  #loginCard{
+    max-width:400px;
+    margin:120px auto; /* Significantly increased margin-top to push it down */
+    padding:30px; 
+    background:var(--card);
+    border-radius:var(--radius);
+    text-align:center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
+    border: 1px solid rgba(255,255,255,0.05); 
+  }
+  #loginCard h1{
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  #loginCard .welcome{ 
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  #loginCard input{
+    width:100%;
+    padding:12px; 
+    margin:8px 0; 
+    border-radius:10px; 
+    background:var(--glass);
+    border:1px solid rgba(255,255,255,0.05);
+    color:inherit;
+    transition: border-color 0.2s;
+  }
+  #loginCard input:focus{
+    outline: none;
+    border-color: var(--accent); 
+  }
+  .btn:hover{ 
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+<div id="loginCard">
+  <h1>SafeNet Hub Login</h1>
+  <p class="welcome">Welcome back. Please sign in to access the AI Safety Lens.</p>
+  
+  <input id="username" placeholder="Username" aria-label="Username" /><br/>
+  <input id="password" type="password" placeholder="Password" aria-label="Password" /><br/>
+  
+  <button id="loginBtn" class="btn" style="width:100%; margin-top: 10px;">
+    Secure Login
+  </button>
+  <p class="meta" id="loginMsg" style="margin-top: 15px; min-height: 20px;"></p>
+</div>
+
+<div class="container" id="mainApp" style="display:none">
+  <div>
+    <header>
+      <div class="logo" aria-hidden>SN</div>
+      <div class="brand">
+        <h1>SafeNet Hub — AI Safety Lens</h1>
+        <p class="subtitle">Real-time detection · Evidence export · Partner-ready reports</p>
+      </div>
+    </header>
+
+    <main class="main" aria-live="polite">
+      <section class="card">
+        <label for="postText">Quick Scan — Paste message or post text</label>
+        <textarea id="postText"></textarea>
+        <div class="controls" style="margin-top:10px">
+          <button id="scanBtn" class="btn small">Scan Now</button>
+          <button id="clearBtn" class="btn ghost small">Clear</button>
+          <div style="margin-left:auto" class="meta">Model: <strong>SafetyLens v0.9 (demo)</strong></div>
+        </div>
+        <div id="scanResult" style="margin-top:12px"></div>
+      </section>
+
+      <section class="card" aria-label="Image upload and analysis">
+        <label for="imageUpload">Image / Video preview & basic analysis</label>
+        <div style="display:flex;gap:12px;margin-top:10px">
+          <input id="imageUpload" type="file" accept="image/*,video/*" />
+          <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;justify-content:center">
+            <button id="analyzeImage" class="btn small">Analyze File</button>
+            <button id="resetImage" class="btn ghost small">Remove</button>
+          </div>
+        </div>
+        <div class="preview" style="margin-top:12px">
+          <div class="img-preview" id="previewBox">No file selected</div>
+          <div class="img-preview" id="analysisBox">No analysis yet</div>
+        </div>
+        <div class="meta" style="margin-top:8px">Tip: This demo uses heuristic checks and simulated deepfake score.</div>
+      </section>
+
+      <section class="card" aria-label="Evidence and report">
+        <label>Digital Evidence & Reporting</label>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+          <input id="victimName" placeholder="Victim name (optional)" style="flex:1;padding:10px;border-radius:8px;background:var(--glass);border:1px solid rgba(255,255,255,0.03);color:inherit" />
+          <button id="generateEvidence" class="btn small">Generate Evidence Report</button>
+        </div>
+        <div class="evidence-actions">
+          <button id="downloadEvidence" class="btn ghost small">Download JSON</button>
+          <button id="copyEvidence" class="btn ghost small">Copy JSON</button>
+          <div id="evidenceStatus" class="meta" style="align-self:center">No report generated</div>
+        </div>
+        <pre id="evidenceJSON" class="json" aria-hidden="true" style="display:none"></pre>
+      </section>
+
+      <section class="card" aria-label="Lessons">
+        <label>Learn How Scammers Trick People</label>
+        <div style="margin-top:6px;font-size:12px;color:var(--muted)">Lesson <span id="lessonNumber">1</span> of <span id="totalLessons">4</span></div>
+        <div style="background:rgba(255,255,255,0.05);border-radius:8px;height:12px;margin-top:8px;overflow:hidden">
+          <div id="lessonProgress" style="background:var(--accent);height:100%;width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div id="lessonContent" style="margin-top:10px; min-height:60px;line-height:1.5;"></div>
+        <div style="display:flex;justify-content:space-between;gap:8px;margin-top:12px">
+          <button id="prevLesson" class="btn small ghost" style="flex:1">Previous</button>
+          <button id="nextLesson" class="btn small" style="flex:1">Next Lesson</button>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Quiz" id="quizCard" style="display:none">
+        <label>Quiz</label>
+        <div id="quizQuestion" style="margin-top:6px;font-weight:600"></div>
+        <div id="quizOptions" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+        <p id="quizFeedback" class="meta" style="margin-top:6px"></p>
+        <button id="nextQuiz" class="btn small" style="margin-top:8px">Next Quiz</button>
+      </section>
+    </main>
+  </div>
+
+  <aside class="right">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <label>Flagged Items</label>
+          <div class="meta">Detected risks and recommended actions</div>
+        </div>
+        <div class="tag">Auto-scan</div>
+      </div>
+      <div class="flag-list" id="flagList" aria-live="polite" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <label>Partner Actions</label>
+      <div style="margin-top:10px" class="meta">Simulated secure-sharing with NGOs & cyber units</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="sendToNGO" class="btn small">Share with NGO</button>
+        <button id="sendToPolice" class="btn small">Share with Cyber Unit</button>
+      </div>
+      <div id="partnerResult" class="meta" style="margin-top:10px">No outgoing shares yet.</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ---------- Login ----------
+const loginBtn = document.getElementById('loginBtn');
+loginBtn.addEventListener('click', () => {
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  const loginMsg = document.getElementById('loginMsg');
+  
+  // MODIFIED LOGIC: Allow login if ANY text is entered in both fields
+  if(user !== '' && pass !== ''){ 
+    document.getElementById('loginCard').style.display='none';
+    document.getElementById('mainApp').style.display='grid';
+  } else {
+    loginMsg.textContent='Please enter a username and password.';
+  }
+});
+
+// ---------- Risk Scanner ----------
+const riskKeywords={harassment:['idiot','slut','whore','bitch','trash'],sexualThreat:['expose','share your photo','nudes','leak','blackmail'],scam:['transfer','send money','job offer','crypto','investment'],recruitment:['work from home','urgent job','visa','sponsor']};
+const flagged=document.getElementById('flagList');
+const resultBox=document.getElementById('scanResult');
+const scanBtn=document.getElementById('scanBtn');
+const clearBtn=document.getElementById('clearBtn');
+const postText=document.getElementById('postText');
+const imageUpload=document.getElementById('imageUpload');
+const previewBox=document.getElementById('previewBox');
+const analysisBox=document.getElementById('analysisBox');
+const analyzeImage=document.getElementById('analyzeImage');
+const resetImage=document.getElementById('resetImage');
+const generateEvidence=document.getElementById('generateEvidence');
+const downloadBtn=document.getElementById('downloadEvidence');
+const copyBtn=document.getElementById('copyEvidence');
+const evidenceJSON=document.getElementById('evidenceJSON');
+const evidenceStatus=document.getElementById('evidenceStatus');
+const victimName=document.getElementById('victimName');
+const sendToNGO=document.getElementById('sendToNGO');
+const sendToPolice=document.getElementById('sendToPolice');
+let lastReport=null, uploadedFile=null;
+
+function addFlag(title,desc,severity='low'){
+  const el=document.createElement('div');
+  el.className='flag-item';
+  el.innerHTML=`<div style="flex:1"><strong>${title}</strong><div class="meta" style="margin-top:6px">${desc}</div></div><div style="text-align:right"><div class="${severity==='high'?'risk-high':'risk-low'}">${severity==='high'?'HIGH':'LOW'}</div><div class="tag" style="margin-top:8px">Action: report</div></div>`;
+  flagged.prepend(el);
+}
+
+function scanTextForRisks(text){
+  flagged.innerHTML=''; resultBox.innerHTML='';
+  if(!text||!text.trim()){ resultBox.innerHTML='<div class="meta">No text to scan.</div>'; return;}
+  const lower=text.toLowerCase(); let found=[];
+  Object.keys(riskKeywords).forEach(k=>{ riskKeywords[k].forEach(word=>{ if(lower.includes(word)) found.push({type:k,word}); }); });
+  if(found.length===0){ resultBox.innerHTML='<div class="meta">No obvious risks detected. (Demo scan)</div>'; addFlag('No immediate risk found','Content does not match known demo risk patterns.','low'); }
+  else{ resultBox.innerHTML=`<div class="meta"><strong>${found.length}</strong> possible risky term(s) detected.</div>`; found.slice(0,6).forEach(f=>{ addFlag(f.type,`Matched word: "${f.word}"`,'high'); }); }
+}
+
+function analyzeFile(file){
+  if(!file){ analysisBox.textContent='No file to analyze'; return;}
+  const url=URL.createObjectURL(file);
+  const isVideo=file.type.startsWith('video/');
+  previewBox.innerHTML=isVideo?`<video src="${url}" controls style="max-width:100%;max-height:100%"></video>`:`<img src="${url}" alt="preview" style="max-width:100%;max-height:100%;display:block"/>`;
+  const sizeMB=file.size/(1024*1024);
+  let score=Math.min(95,Math.round(30+Math.random()*40+(sizeMB>2?10:0)));
+  const nm=file.name.toLowerCase(); if(nm.includes('edit')||nm.includes('fake')) score=Math.min(98,score+10);
+  analysisBox.innerHTML=`<div style="text-align:center"><strong>Deepfake probability (simulated)</strong><div style="font-size:24px;margin-top:8px">${score}%</div><div class="meta" style="margin-top:8px">Heuristic score — demo only</div></div>`;
+  addFlag(score>70?'Possible deepfake detected':'Low deepfake likelihood',`Simulated score ${score}%`,score>70?'high':'low');
+}
+
+function buildEvidence(){
+  const id='SN-EV-'+Date.now();
+  const now=new Date().toISOString();
+  const text=postText.value||null;
+  const victim=victimName.value||null;
+  const flags=Array.from(document.querySelectorAll('.flag-item')).map((el,i)=>({id:i+1,title:el.querySelector('strong')?.innerText||'',description:el.querySelector('.meta')?.innerText||''}));
+  const evidence={report_id:id,timestamp:now,victim:victim,scanned_text:text,flags:flags,file:uploadedFile?{name:uploadedFile.name,size:uploadedFile.size,type:uploadedFile.type}:null,agent:'SafeNet Hub — Safety Lens demo'};
+  lastReport=evidence;
+  evidenceJSON.style.display='block';
+  evidenceJSON.textContent=JSON.stringify(evidence,null,2);
+  evidenceStatus.textContent='Report ready: '+id;
+  return evidence;
+}
+
+function downloadJSON(jsonObj,filename='evidence.json'){
+  const blob=new Blob([JSON.stringify(jsonObj,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+scanBtn.addEventListener('click',()=>scanTextForRisks(postText.value));
+clearBtn.addEventListener('click',()=>{postText.value='';scanTextForRisks('');});
+imageUpload.addEventListener('change',e=>{if(e.target.files&&e.target.files[0]){uploadedFile=e.target.files[0];previewBox.textContent='Ready to analyze';analysisBox.textContent='No analysis yet';}});
+analyzeImage.addEventListener('click',()=>analyzeFile(uploadedFile));
+resetImage.addEventListener('click',()=>{uploadedFile=null;imageUpload.value='';previewBox.textContent='No file selected';analysisBox.textContent='No analysis yet';flagged.innerHTML='';});
+generateEvidence.addEventListener('click',()=>{if(!postText.value&&!uploadedFile){alert('Provide text or file first');return;} buildEvidence();});
+downloadBtn.addEventListener('click',()=>{if(!lastReport){alert('No report available');return;} downloadJSON(lastReport,`safenet_evidence_${lastReport.report_id}.json`);});
+copyBtn.addEventListener('click',()=>{if(!lastReport){alert('No report available');return;} navigator.clipboard?.writeText(JSON.stringify(lastReport,null,2)).then(()=>alert('Copied to clipboard'));});
+sendToNGO.addEventListener('click',()=>{if(!lastReport)return alert('Generate report first'); partnerResult.textContent=`Shared with NGO (demo) — ${lastReport.report_id}`;});
+sendToPolice.addEventListener('click',()=>{if(!lastReport)return alert('Generate report first'); partnerResult.textContent=`Shared with Cyber Unit (demo) — ${lastReport.report_id}`;});
+
+// ---------- Lessons & Quiz ----------
+const lessons=[
+  {text:'Scams try to take your money by pretending to help. Stop and think before sharing info or paying.',quiz:{q:'What should you do if someone asks for your bank details?',options:['Give them immediately','Stop and think','Ignore them'],answer:1}},
+  {text:'Impersonation scams involve someone pretending to be someone you trust to take your money.',quiz:{q:'Who might scammers pretend to be?',options:['Your bank','Your friend','Both'],answer:2}},
+  {text:'Romance scams involve someone pretending to be in love with you to take your money.',quiz:{q:'What should you do if someone you met online asks for money?',options:['Send money','Report and block them','Meet them in person'],answer:1}},
+  {text:'Criminals may use AI to make scams look real. Always verify before acting.',quiz:{q:'How can you protect yourself from AI-driven scams?',options:['Trust everything online','Verify information','Ignore all messages'],answer:1}}
+];
+
+let currentLesson=0;
+const lessonContent=document.getElementById('lessonContent');
+const lessonNumber=document.getElementById('lessonNumber');
+const totalLessons=document.getElementById('totalLessons');
+const prevLessonBtn=document.getElementById('prevLesson');
+const nextLessonBtn=document.getElementById('nextLesson');
+const lessonProgress=document.getElementById('lessonProgress');
+const quizCard=document.getElementById('quizCard');
+const quizQuestion=document.getElementById('quizQuestion');
+const quizOptions=document.getElementById('quizOptions');
+const quizFeedback=document.getElementById('quizFeedback');
+const nextQuizBtn=document.getElementById('nextQuiz');
+
+totalLessons.textContent=lessons.length;
+
+function showLesson(i){
+  const lesson=lessons[i];
+  lessonNumber.textContent=i+1;
+  lessonContent.textContent=lesson.text;
+  lessonProgress.style.width=`${((i+1)/lessons.length)*100}%`;
+  nextQuizBtn.style.display=lesson.quiz?'inline-block':'none';
+  prevLessonBtn.disabled=(i===0);
+  nextLessonBtn.textContent=(i===lessons.length-1)?'Restart Course':'Next Lesson';
+  quizCard.style.display='none';
+}
+
+function showQuiz(i){
+  const quiz=lessons[i].quiz;
+  if(!quiz)return;
+  quizCard.style.display='block';
+  quizQuestion.textContent=quiz.q;
+  quizOptions.innerHTML='';
+  quizFeedback.textContent='';
+  quiz.options.forEach((opt,index)=>{
+    const btn=document.createElement('button');
+    btn.className='btn small'; btn.textContent=opt; btn.style.width='100%';
+    btn.addEventListener('click',()=>{quizFeedback.textContent=(index===quiz.answer)?'Correct ✅':'Incorrect ❌';});
+    quizOptions.appendChild(btn);
+  });
+}
+
+nextLessonBtn.addEventListener('click',()=>{
+  currentLesson=(currentLesson+1>=lessons.length)?0:currentLesson+1;
+  showLesson(currentLesson);
+});
+prevLessonBtn.addEventListener('click',()=>{
+  currentLesson=(currentLesson-1<0)?0:currentLesson-1;
+  showLesson(currentLesson);
+});
+nextQuizBtn.addEventListener('click',()=>showQuiz(currentLesson));
+showLesson(currentLesson);
+
+// ---------- Initial Demo ----------
+postText.value='Hello — send money for job, or I will expose your photos. transfer 200 quickly.';
+scanTextForRisks(postText.value);
+</script>
+</body>
+</html>
